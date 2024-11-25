@@ -28,7 +28,7 @@ limitations under the License.
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 
-SSD1306Wire  display(0x3c, 21, 22);
+//SSD1306Wire  display(0x3c, 21, 22);
 
 uint32_t inferenceCounter = 0;
 uint32_t inferenceStart = 0;
@@ -56,10 +56,10 @@ uint8_t* model_input_buffer = nullptr;
 // The name of this function is important for Arduino compatibility.
 void setup() {
   //static SSD1306Wire  display(0x3c, 21, 22);
-  display.init();
-  display.clear();
-  display.setFont(ArialMT_Plain_24);
-  display.display();
+  //display.init();
+  //display.clear();
+  //display.setFont(ArialMT_Plain_24);
+  //display.display();
   log_d("Total heap: %d", ESP.getHeapSize());
   log_d("Free heap: %d", ESP.getFreeHeap());
   log_d("Total PSRAM: %d", ESP.getPsramSize());
@@ -194,14 +194,14 @@ void loop() {
     inferenceStart = millis();
     inferenceCounter = 0;
   }
-  display.clear();
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 10, inferencePerSecond);
-  display.drawString(0, 20, String(inferenceCounter));
+  //display.clear();
+  //display.setFont(ArialMT_Plain_10);
+  //display.drawString(0, 10, inferencePerSecond);
+  //display.drawString(0, 20, String(inferenceCounter));
   // Do something based on the recognized command. The default implementation
   // just prints to the error console, but you should replace this with your
   // own function for a real application.
-  RespondToCommand(error_reporter, &display, current_time, found_command, score,
-                   is_new_command);
-  display.display();
+  //RespondToCommand(error_reporter, &display, current_time, found_command, score,
+  //                 is_new_command);
+  //display.display();
 }

@@ -23,7 +23,7 @@ limitations under the License.
 // The default implementation writes out the name of the recognized command
 // to the error console. Real applications will want to take some custom
 // action instead, and should implement their own versions of this function.
-void RespondToCommand(tflite::ErrorReporter* error_reporter, OLEDDisplay *display,
+void RespondToCommand(tflite::ErrorReporter* error_reporter,
                       int32_t current_time, const char* found_command,
                       uint8_t score, bool is_new_command) {
 
@@ -35,8 +35,8 @@ void RespondToCommand(tflite::ErrorReporter* error_reporter, OLEDDisplay *displa
     command = String(found_command);                     
     lastInfo = millis();
   } 
-  display->setFont(ArialMT_Plain_24);
-  display->drawString(0, 26, command);
+  //display->setFont(ArialMT_Plain_24);
+  //display->drawString(0, 26, command);
   if (millis() - lastInfo > 1000) {
     command = "";
   }
