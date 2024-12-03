@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-
+#include <Arduino.h>
 #include "feature_provider.h"
 
 #include "audio_provider.h"
@@ -99,7 +99,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
       // TODO(petewarden): Fix bug that leads to non-zero slice_start_ms
       GetAudioSamples(error_reporter, (slice_start_ms > 0 ? slice_start_ms : 0),
                       kFeatureSliceDurationMs, &audio_samples_size,
-                      &audio_samples);
+                      &audio_samples);            
       if (audio_samples_size < kMaxAudioSampleSize) {
         TF_LITE_REPORT_ERROR(error_reporter,
                              "Audio data size %d too small, want %d",

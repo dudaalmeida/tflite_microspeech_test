@@ -46,9 +46,9 @@ ringbuf_t *rb_init(const char *name, uint32_t size) {
 #if (CONFIG_SPIRAM_SUPPORT && \
      (CONFIG_SPIRAM_USE_CAPS_ALLOC || CONFIG_SPIRAM_USE_MALLOC))
   //buf = heap_caps_calloc(1, size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  //buf = calloc(1, size);
-  buf = ps_malloc(size);
-  
+  buf = calloc(1, size);
+  //buf = ps_malloc(size);
+  log_d("size: %d", size);
 #else
   buf = calloc(1, size);
 #endif
@@ -102,6 +102,7 @@ ssize_t rb_available(ringbuf_t *rb) {
 int rb_read(ringbuf_t *rb, uint8_t *buf, int buf_len, uint32_t ticks_to_wait) {
   int read_size;
   int total_read_size = 0;
+  //log_d("Reading %d bytes to ring buffer", buf_len);
 
   /**
    * In case where we are able to read buf_len in one go,
@@ -179,6 +180,7 @@ out:
     total_read_size = RB_WRITER_FINISHED;
   }
   rb->reader_unblock = 0; /* We are anyway unblocking reader */
+  //log_d("total_read_size: %d", total_read_size);
   return total_read_size;
 }
 
@@ -186,6 +188,7 @@ int rb_write(ringbuf_t *rb, const uint8_t *buf, int buf_len,
              uint32_t ticks_to_wait) {
   int write_size;
   int total_write_size = 0;
+  //log_d("Writing %d bytes to ring buffer", buf_len);
 
   /**
    * In case where we are able to write buf_len in one go,
@@ -243,6 +246,7 @@ int rb_write(ringbuf_t *rb, const uint8_t *buf, int buf_len,
 
   xSemaphoreGive(rb->lock);
 out:
+  //log_d("total_write_size: %d", total_write_size);
   return total_write_size;
 }
 

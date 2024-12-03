@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 #include <Arduino.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_GFX.h>
 
 #include "kiss_fft.h"
 #include "audio_provider.h"
@@ -27,6 +29,23 @@ limitations under the License.
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
+
+#include "esp_heap_caps.h"
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+#define OLED_RESET 4
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define NUMFLAKES     10 // Number of snowflakes in the animation example
+
+#define LOGO_HEIGHT   16
+#define LOGO_WIDTH    16
+static const unsigned char PROGMEM logo_bmp[] =
+{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+};
 
 //SSD1306Wire  display(0x3c, 21, 22);
 
@@ -53,17 +72,26 @@ uint8_t feature_buffer[kFeatureElementCount];
 uint8_t* model_input_buffer = nullptr;
 }  // namespace
 
+void intro(const char *message);
+
 // The name of this function is important for Arduino compatibility.
 void setup() {
+  if (psramFound()) {
+   log_d("PSRAM habilitada e detectada!");
+  } else {
+   log_d("Erro: PSRAM não detectada.");
+  }
   //static SSD1306Wire  display(0x3c, 21, 22);
   //display.init();
   //display.clear();
   //display.setFont(ArialMT_Plain_24);
   //display.display();
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.display();
   log_d("Total heap: %d", ESP.getHeapSize());
   log_d("Free heap: %d", ESP.getFreeHeap());
-  log_d("Total PSRAM: %d", ESP.getPsramSize());
-  log_d("Free PSRAM: %d", ESP.getFreePsram());
+  //log_d("Total PSRAM: %d", ESP.getPsramSize());
+  //log_d("Free PSRAM: %d", ESP.getFreePsram());
 
   // Set up logging. Google style is to avoid globals or statics because of
   // lifetime uncertainty, but since this has a trivial destructor it's okay.
@@ -145,7 +173,7 @@ void setup() {
 }
 
 // The name of this function is important for Arduino compatibility.
-void loop() {
+void loop() {  
   // Fetch the spectrogram for the current time.
   const int32_t current_time = LatestAudioTimestamp();
   int how_many_new_slices = 0;
@@ -173,7 +201,6 @@ void loop() {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed");
     return;
   }
-
   // Obtain a pointer to the output tensor
   TfLiteTensor* output = interpreter->output(0);
   // Determine whether a command was recognized based on the output of inference
@@ -187,7 +214,6 @@ void loop() {
                          "RecognizeCommands::ProcessLatestResults() failed");
     return;
   }
-
   inferenceCounter++;
   if (inferenceCounter > 10) {
     inferencePerSecond = String((1000.0 * inferenceCounter) / (millis() - inferenceStart)) + "ips";
@@ -204,4 +230,24 @@ void loop() {
   //RespondToCommand(error_reporter, &display, current_time, found_command, score,
   //                 is_new_command);
   //display.display();
+  log_d("Passou daqui");
+  log_d("%s", found_command);
+  intro(found_command);
+}
+
+void intro(const char *message) {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.print(F("Message: "));
+  display.println(*message);
+  
+  //display.setCursor(20, 20);
+  //display.println(F("Display"));
+  //display.setCursor(15, 40);
+  //display.println(F("Tutorial"));
+  
+  display.display();// Show initial text
+  delay(1000);
 }
