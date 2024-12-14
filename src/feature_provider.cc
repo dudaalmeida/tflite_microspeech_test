@@ -27,6 +27,8 @@ FeatureProvider::FeatureProvider(int feature_size, uint8_t* feature_data)
   for (int n = 0; n < feature_size_; ++n) {
     feature_data_[n] = 0;
   }
+  log_d("Feature size: %i", feature_size_);
+  log_d("Feature provider initialized.");
 }
 
 FeatureProvider::~FeatureProvider() {}
@@ -38,6 +40,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Requested feature_data_ size %d doesn't match %d",
                          feature_size_, kFeatureElementCount);
+    log_d("Error: feature size mismatch.");
     return kTfLiteError;
   }
 
@@ -49,6 +52,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
   int slices_needed = current_step - last_step;
   // If this is the first call, make sure we don't use any cached information.
   if (is_first_run_) {
+    log_d("First run - Initializing features...");
     TfLiteStatus init_status = InitializeMicroFeatures(error_reporter);
     if (init_status != kTfLiteOk) {
       return init_status;
@@ -56,6 +60,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
     is_first_run_ = false;
     slices_needed = kFeatureSliceCount;
   }
+  log_d("Subsequent run - Updating features...");
   if (slices_needed > kFeatureSliceCount) {
     slices_needed = kFeatureSliceCount;
   }
@@ -100,9 +105,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
       GetAudioSamples(error_reporter, (slice_start_ms > 0 ? slice_start_ms : 0),
                       kFeatureSliceDurationMs, &audio_samples_size,
                       &audio_samples);    
-      //for (int i = 0; i < 10; i++) { // Ajuste para visualizar mais ou menos valores
-      //  log_d("%i",audio_samples[i]);
-      //}
+      log_d("Audio samples size: %i", audio_samples_size);
       
       if (audio_samples_size < kMaxAudioSampleSize) {
         TF_LITE_REPORT_ERROR(error_reporter,
@@ -115,9 +118,12 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
       TfLiteStatus generate_status = GenerateMicroFeatures(
           error_reporter, audio_samples, audio_samples_size, kFeatureSliceSize,
           new_slice_data, &num_samples_read);
+
       if (generate_status != kTfLiteOk) {
+        log_d("Error generating micro features.");
         return generate_status;
       }
+      log_d("Generated micro features: %i", num_samples_read);
     }
   }
   return kTfLiteOk;

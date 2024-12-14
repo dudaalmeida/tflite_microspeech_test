@@ -183,9 +183,9 @@ void loop() {
   int how_many_new_slices = 0;
   TfLiteStatus feature_status = feature_provider->PopulateFeatureData(
       error_reporter, previous_time, current_time, &how_many_new_slices);
-  log_d("how_many_new_slices: %i", how_many_new_slices);
   if (feature_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Feature generation failed");
+    log_d("Feature generation failed");
     return;
   }
   previous_time = current_time;
@@ -198,16 +198,20 @@ void loop() {
   // Copy feature buffer to input tensor
   for (int i = 0; i < kFeatureElementCount; i++) {
     model_input_buffer[i] = feature_buffer[i];
+    //log_d("model_input_buffer[i]: %i",  model_input_buffer[i]);
   }
 
   // Run the model on the spectrogram input and make sure it succeeds.
   TfLiteStatus invoke_status = interpreter->Invoke();
+  log_d("invoke_status: %i", invoke_status);
   if (invoke_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed");
+    log_d("Invoke failed");
     return;
   }
   // Obtain a pointer to the output tensor
   TfLiteTensor* output = interpreter->output(0);
+  log_d("Output: %i",output->bytes);
   // Determine whether a command was recognized based on the output of inference
   const char* found_command = nullptr;
   uint8_t score = 0;

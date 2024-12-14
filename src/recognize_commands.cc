@@ -83,6 +83,7 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
   const int64_t time_limit = current_time_ms - average_window_duration_ms_;
   log_d("Iniciando limpeza do buffer. Tamanho atual: %i", previous_results_.size());
   while ((!previous_results_.empty()) &&
+  //while ((previous_results_.size() > 4) &&
         previous_results_.front().time_ < time_limit) {
     log_d("Removendo resultado antigo: Tempo: %i", previous_results_.front().time_);
     previous_results_.pop_front();
@@ -107,9 +108,10 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
     log_d("Tempo: %i", previous_results_.from_front(offset).time_);
   }
 
-  log_d("\n\n\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n\n");
+  //log_d("\n\n\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n\n");
 
-  if ((how_many_results < minimum_count_) ||
+  //if ((how_many_results < minimum_count_) ||
+  if ((how_many_results < 0) &&
       (samples_duration < (average_window_duration_ms_ / 4))) {
     *found_command = previous_top_label_;
     *score = 0;
@@ -117,7 +119,7 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
     return kTfLiteOk;
   }
 
-  log_d("\n\n\n\n\n yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy \n\n\n\n\n");
+  //log_d("\n\n\n\n\n yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy \n\n\n\n\n");
 
   // Calculate the average score across all the results in the window.
   int32_t average_scores[kCategoryCount];
@@ -148,7 +150,7 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
     log_d("%i", a);
   }
 
-  log_d("\n\n\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n\n");
+  //log_d("\n\n\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n\n");
 
   // Find the current highest scoring category.
   int current_top_index = 0;

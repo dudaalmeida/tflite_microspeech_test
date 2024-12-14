@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+#include <Arduino.h>
 #include "tensorflow/lite/micro/micro_interpreter.h"
 
 #include "tensorflow/lite/c/common.h"
@@ -25,6 +26,7 @@ namespace tflite {
 namespace {
 
 const char* OpNameFromRegistration(const TfLiteRegistration* registration) {
+  log_d("Entrou na função Op Name From Registration");
   if (registration->builtin_code == BuiltinOperator_CUSTOM) {
     return registration->custom_name;
   } else {
@@ -38,6 +40,7 @@ namespace internal {
 
 TfLiteStatus ContextHelper::AllocatePersistentBuffer(TfLiteContext* ctx,
                                                      size_t bytes, void** ptr) {
+  log_d("Entrou na função Allocate Persistent Buffer");
   return reinterpret_cast<ContextHelper*>(ctx->impl_)
       ->allocator_->AllocatePersistentBuffer(bytes, ptr);
 }
@@ -46,11 +49,13 @@ TfLiteStatus ContextHelper::RequestScratchBufferInArena(TfLiteContext* ctx,
                                                         size_t bytes,
                                                         int* buffer_idx) {
   ContextHelper* helper = reinterpret_cast<ContextHelper*>(ctx->impl_);
+  log_d("Entrou na função Request Scratch Buffer In Arena");
   return helper->allocator_->RequestScratchBufferInArena(
       helper->current_node_idx_, bytes, buffer_idx);
 }
 
 void* ContextHelper::GetScratchBuffer(TfLiteContext* ctx, int buffer_idx) {
+  log_d("Entrou na função Get Scratch Buffer");
   return reinterpret_cast<ContextHelper*>(ctx->impl_)
       ->allocator_->GetScratchBuffer(buffer_idx);
 }
@@ -60,6 +65,7 @@ void ContextHelper::ReportOpError(struct TfLiteContext* context,
   ContextHelper* helper = static_cast<ContextHelper*>(context->impl_);
   va_list args;
   va_start(args, format);
+  log_d("Entrou na função Report Error");
   TF_LITE_REPORT_ERROR(helper->error_reporter_, format, args);
   va_end(args);
 }
@@ -78,6 +84,7 @@ MicroInterpreter::MicroInterpreter(const Model* model,
                  error_reporter_),
       tensors_allocated_(false),
       context_helper_(error_reporter_, &allocator_) {
+  log_d("Iniciou o micro interpreter");
   const flatbuffers::Vector<flatbuffers::Offset<SubGraph>>* subgraphs =
       model->subgraphs();
   if (subgraphs->size() != 1) {
@@ -109,6 +116,7 @@ MicroInterpreter::MicroInterpreter(const Model* model,
 }
 
 MicroInterpreter::~MicroInterpreter() {
+  log_d("Entrou na função Micro Interpreter");
   if (node_and_registrations_ != nullptr) {
     for (size_t i = 0; i < subgraph_->operators()->size(); ++i) {
       TfLiteNode* node = &(node_and_registrations_[i].node);
@@ -124,6 +132,7 @@ MicroInterpreter::~MicroInterpreter() {
 }
 
 void MicroInterpreter::CorrectTensorEndianness(TfLiteTensor* tensorCorr) {
+  log_d("Entrou na função Correct Tensor Data Endianness");
   int32_t tensorSize = 1;
   for (int d = 0; d < tensorCorr->dims->size; ++d)
     tensorSize *= reinterpret_cast<const int32_t*>(tensorCorr->dims->data)[d];
@@ -155,6 +164,7 @@ void MicroInterpreter::CorrectTensorEndianness(TfLiteTensor* tensorCorr) {
 
 template <class T>
 void MicroInterpreter::CorrectTensorDataEndianness(T* data, int32_t size) {
+  log_d("Entrou na função Correct Tensor Data Endianness");
   for (int32_t i = 0; i < size; ++i) {
     data[i] = flatbuffers::EndianScalar(data[i]);
   }
@@ -163,11 +173,25 @@ void MicroInterpreter::CorrectTensorDataEndianness(T* data, int32_t size) {
 TfLiteStatus MicroInterpreter::AllocateTensors() {
   TF_LITE_ENSURE_OK(&context_, allocator_.AllocateNodeAndRegistrations(
                                    op_resolver_, &node_and_registrations_));
-
+  log_d("Entrou na função para alocar tensores");
   // Only allow AllocatePersistentBuffer in Init stage.
   context_.AllocatePersistentBuffer = context_helper_.AllocatePersistentBuffer;
   context_.RequestScratchBufferInArena = nullptr;
   context_.GetScratchBuffer = nullptr;
+
+  // Verificar dimensões dos tensores após a alocação
+  for (size_t i = 0; i < subgraph_->tensors()->size(); ++i) {
+    TfLiteTensor* tensor = &context_.tensors[i];
+
+    // Verifique se as dimensões são válidas
+    if (tensor->dims->size == 0 || tensor->dims->data == nullptr) {
+      TF_LITE_REPORT_ERROR(error_reporter_,
+                           "Tensor %d has invalid dimensions!", i);
+      log_d("Tensor %d has invalid dimensions!", i);
+      return kTfLiteError;
+    }
+    log_d("Dimensões do tensor: %i", tensor->dims->size);
+  }
 
   for (size_t i = 0; i < subgraph_->operators()->size(); ++i) {
     context_helper_.SetNodeIndex(i);
@@ -226,6 +250,7 @@ TfLiteStatus MicroInterpreter::Invoke() {
   if (initialization_status_ != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter_,
                          "Invoke() called after initialization failed\n");
+    log_d("Invoke() called after initialization failed\n");
     return kTfLiteError;
   }
 
@@ -233,6 +258,7 @@ TfLiteStatus MicroInterpreter::Invoke() {
   // difficult to debug segfaults.
   if (!tensors_allocated_) {
     TF_LITE_ENSURE_OK(&context_, AllocateTensors());
+    log_d("Allocating Tensors");
   }
 
   for (size_t i = 0; i < subgraph_->operators()->size(); ++i) {
@@ -246,6 +272,7 @@ TfLiteStatus MicroInterpreter::Invoke() {
             error_reporter_,
             "Node %s (number %d) failed to invoke with status %d",
             OpNameFromRegistration(registration), i, invoke_status);
+            log_d("Node %s (number %d) failed to invoke with status %d", OpNameFromRegistration(registration), i, invoke_status);
         return kTfLiteError;
       } else if (invoke_status != kTfLiteOk) {
         return invoke_status;
