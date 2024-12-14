@@ -14,10 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "command_responder.h"
-
-
-
-
+#include <Arduino.h>
 
 
 // The default implementation writes out the name of the recognized command
@@ -34,6 +31,7 @@ void RespondToCommand(tflite::ErrorReporter* error_reporter,
                          score, current_time);
     command = String(found_command);                     
     lastInfo = millis();
+    log_d("Comando: %s \n", command);
   } 
   //display->setFont(ArialMT_Plain_24);
   //display->drawString(0, 26, command);

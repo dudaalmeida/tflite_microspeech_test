@@ -99,7 +99,11 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
       // TODO(petewarden): Fix bug that leads to non-zero slice_start_ms
       GetAudioSamples(error_reporter, (slice_start_ms > 0 ? slice_start_ms : 0),
                       kFeatureSliceDurationMs, &audio_samples_size,
-                      &audio_samples);            
+                      &audio_samples);    
+      //for (int i = 0; i < 10; i++) { // Ajuste para visualizar mais ou menos valores
+      //  log_d("%i",audio_samples[i]);
+      //}
+      
       if (audio_samples_size < kMaxAudioSampleSize) {
         TF_LITE_REPORT_ERROR(error_reporter,
                              "Audio data size %d too small, want %d",

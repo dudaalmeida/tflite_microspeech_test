@@ -16,6 +16,8 @@ limitations under the License.
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>
 
+#include <esp_task_wdt.h>
+
 #include "kiss_fft.h"
 #include "audio_provider.h"
 #include "command_responder.h"
@@ -170,6 +172,8 @@ void setup() {
   recognizer = &static_recognizer;
 
   previous_time = 0;
+  //esp_task_wdt_deinit();
+
 }
 
 // The name of this function is important for Arduino compatibility.
@@ -179,6 +183,7 @@ void loop() {
   int how_many_new_slices = 0;
   TfLiteStatus feature_status = feature_provider->PopulateFeatureData(
       error_reporter, previous_time, current_time, &how_many_new_slices);
+  log_d("how_many_new_slices: %i", how_many_new_slices);
   if (feature_status != kTfLiteOk) {
     TF_LITE_REPORT_ERROR(error_reporter, "Feature generation failed");
     return;
@@ -230,8 +235,8 @@ void loop() {
   //RespondToCommand(error_reporter, &display, current_time, found_command, score,
   //                 is_new_command);
   //display.display();
-  log_d("Passou daqui");
-  log_d("%s", found_command);
+  log_d("Comando: %s \n", found_command);
+  log_d("Score: %d \n", score);
   intro(found_command);
 }
 

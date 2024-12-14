@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "recognize_commands.h"
+#include <Arduino.h>
 
 #include <limits>
 
@@ -35,6 +36,7 @@ RecognizeCommands::RecognizeCommands(tflite::ErrorReporter* error_reporter,
 TfLiteStatus RecognizeCommands::ProcessLatestResults(
     const TfLiteTensor* latest_results, const int32_t current_time_ms,
     const char** found_command, uint8_t* score, bool* is_new_command) {
+    log_d("Chegou até aqui no command recognizer");
   if ((latest_results->dims->size != 2) ||
       (latest_results->dims->data[0] != 1) ||
       (latest_results->dims->data[1] != kCategoryCount)) {
@@ -46,6 +48,7 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
         latest_results->dims->size);
     return kTfLiteError;
   }
+  //log_d("Chegou até aqui no command recognizer");
 
   if (latest_results->type != kTfLiteUInt8) {
     TF_LITE_REPORT_ERROR(
@@ -54,6 +57,8 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
         latest_results->type);
     return kTfLiteError;
   }
+
+  //log_d("Chegou até aqui no command recognizer");
 
   if ((!previous_results_.empty()) &&
       (current_time_ms < previous_results_.front().time_)) {
@@ -65,21 +70,45 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
     return kTfLiteError;
   }
 
+  //log_d("Chegou até aqui no command recognizer");
+
   // Add the latest results to the head of the queue.
   previous_results_.push_back({current_time_ms, latest_results->data.uint8});
 
+  log_d("Adicionando resultado: Tempo: %i", current_time_ms);
+
+
   // Prune any earlier results that are too old for the averaging window.
+  //logs adicionados
   const int64_t time_limit = current_time_ms - average_window_duration_ms_;
+  log_d("Iniciando limpeza do buffer. Tamanho atual: %i", previous_results_.size());
   while ((!previous_results_.empty()) &&
-         previous_results_.front().time_ < time_limit) {
+        previous_results_.front().time_ < time_limit) {
+    log_d("Removendo resultado antigo: Tempo: %i", previous_results_.front().time_);
     previous_results_.pop_front();
   }
+  log_d("Fim da limpeza do buffer. Tamanho atual: %i", previous_results_.size());
+
 
   // If there are too few results, assume the result will be unreliable and
   // bail.
   const int64_t how_many_results = previous_results_.size();
   const int64_t earliest_time = previous_results_.front().time_;
   const int64_t samples_duration = current_time_ms - earliest_time;
+
+  //O código está ficando preso aqui
+  log_d("how many results: %i", how_many_results);
+  log_d("minimum_count_: %i", minimum_count_);
+  log_d("samples_duration : %i", samples_duration);
+  log_d("average_window_duration_ms_: %i", average_window_duration_ms_);
+
+  log_d("Conteúdo de previous_results_: ");
+  for (int offset = 0; offset < previous_results_.size(); ++offset) {
+    log_d("Tempo: %i", previous_results_.from_front(offset).time_);
+  }
+
+  log_d("\n\n\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n\n");
+
   if ((how_many_results < minimum_count_) ||
       (samples_duration < (average_window_duration_ms_ / 4))) {
     *found_command = previous_top_label_;
@@ -87,6 +116,8 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
     *is_new_command = false;
     return kTfLiteOk;
   }
+
+  log_d("\n\n\n\n\n yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy \n\n\n\n\n");
 
   // Calculate the average score across all the results in the window.
   int32_t average_scores[kCategoryCount];
@@ -105,6 +136,19 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
   for (int i = 0; i < kCategoryCount; ++i) {
     average_scores[i] /= how_many_results;
   }
+
+  // Logando a pontuação média de cada categoria
+  log_d("Pontuação média por categoria:");
+  int32_t a=0;
+  for (int i = 0; i < kCategoryCount; ++i) {
+    log_d("Categoria ");
+    log_d("%i",i);
+    log_d(": ");
+    a = average_scores[i];
+    log_d("%i", a);
+  }
+
+  log_d("\n\n\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n\n\n\n");
 
   // Find the current highest scoring category.
   int current_top_index = 0;
@@ -137,6 +181,8 @@ TfLiteStatus RecognizeCommands::ProcessLatestResults(
   }
   *found_command = current_top_label;
   *score = current_top_score;
+
+  log_d("Comand recognized");
 
   return kTfLiteOk;
 }

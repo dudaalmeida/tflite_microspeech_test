@@ -99,10 +99,15 @@ ssize_t rb_available(ringbuf_t *rb) {
   return (rb->size - rb->fill_cnt);
 }
 
-int rb_read(ringbuf_t *rb, uint8_t *buf, int buf_len, uint32_t ticks_to_wait) {
+//int rb_read(ringbuf_t *rb, uint8_t *buf, int buf_len, uint32_t ticks_to_wait) {
+int rb_read(ringbuf_t *rb, int16_t *buf, int buf_len, uint32_t ticks_to_wait) {
   int read_size;
   int total_read_size = 0;
   //log_d("Reading %d bytes to ring buffer", buf_len);
+  //for (int i = 0; i < 10; i++) { // Ajuste para visualizar mais ou menos valores
+  //  log_d("%i",buf[i]);
+  //}
+  log_d("read_buffer");
 
   /**
    * In case where we are able to read buf_len in one go,
@@ -184,11 +189,17 @@ out:
   return total_read_size;
 }
 
-int rb_write(ringbuf_t *rb, const uint8_t *buf, int buf_len,
+//int rb_write(ringbuf_t *rb, const uint8_t *buf, int buf_len,
+//             uint32_t ticks_to_wait) {
+int rb_write(ringbuf_t *rb, const int16_t *buf, int buf_len,
              uint32_t ticks_to_wait) {
   int write_size;
   int total_write_size = 0;
   //log_d("Writing %d bytes to ring buffer", buf_len);
+
+  //for (int i = 0; i < 10; i++) { // Ajuste para visualizar mais ou menos valores
+  //  log_d("%i",buf[i]);
+  //}
 
   /**
    * In case where we are able to write buf_len in one go,
@@ -202,7 +213,7 @@ int rb_write(ringbuf_t *rb, const uint8_t *buf, int buf_len,
   }
 
   xSemaphoreTake(rb->lock, portMAX_DELAY);
-
+  log_d("buf_len: %i", buf_len); // Para debug
   while (buf_len) {
     if ((rb->size - rb->fill_cnt) < buf_len) {
       write_size = rb->size - rb->fill_cnt;
@@ -218,7 +229,7 @@ int rb_write(ringbuf_t *rb, const uint8_t *buf, int buf_len,
     } else {
       memcpy(rb->writeptr, buf, write_size);
       rb->writeptr = rb->writeptr + write_size;
-    }
+    } 
 
     buf_len -= write_size;
     rb->fill_cnt += write_size;

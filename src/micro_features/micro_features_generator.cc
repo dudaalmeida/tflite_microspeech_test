@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "micro_features_generator.h"
 
+#include <Arduino.h>
 #include <cmath>
 #include <cstring>
 
@@ -97,6 +98,13 @@ TfLiteStatus GenerateMicroFeatures(tflite::ErrorReporter* error_reporter,
     }
     output[i] = value;
   }
+
+  //for (size_t i = 0; i < frontend_output.size; ++i) {
+  //  // Envia cada valor do buffer de saída
+  //  log_d("output: %i", output[i]);
+  //}
+
+  //log_d("Micro_feature generated");
 
   return kTfLiteOk;
 }
