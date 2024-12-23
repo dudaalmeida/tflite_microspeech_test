@@ -68,7 +68,8 @@ int32_t previous_time = 0;
 // Create an area of memory to use for input, output, and intermediate arrays.
 // The size of this will depend on the model you're using, and may need to be
 // determined by experimentation.
-constexpr int kTensorArenaSize = 10 * 1024;
+//constexpr int kTensorArenaSize = 10 * 1024;
+constexpr int kTensorArenaSize = 90 * 1024;
 uint8_t tensor_arena[kTensorArenaSize];
 uint8_t feature_buffer[kFeatureElementCount];
 uint8_t* model_input_buffer = nullptr;
@@ -121,11 +122,11 @@ void setup() {
   // tflite::ops::micro::AllOpsResolver resolver;
   // NOLINTNEXTLINE(runtime-global-variables)
   static tflite::MicroOpResolver<3> micro_op_resolver(error_reporter);
-  if (micro_op_resolver.AddBuiltin(
-          tflite::BuiltinOperator_DEPTHWISE_CONV_2D,
-          tflite::ops::micro::Register_DEPTHWISE_CONV_2D()) != kTfLiteOk) {
-    return;
-  }
+  //if (micro_op_resolver.AddBuiltin(
+  //        tflite::BuiltinOperator_DEPTHWISE_CONV_2D,
+  //        tflite::ops::micro::Register_DEPTHWISE_CONV_2D()) != kTfLiteOk) {
+  //  return;
+  //}
   if (micro_op_resolver.AddBuiltin(
           tflite::BuiltinOperator_FULLY_CONNECTED,
           tflite::ops::micro::Register_FULLY_CONNECTED()) != kTfLiteOk) {
@@ -133,6 +134,12 @@ void setup() {
   }
   if (micro_op_resolver.AddBuiltin(tflite::BuiltinOperator_SOFTMAX,
                                    tflite::ops::micro::Register_SOFTMAX()) !=
+      kTfLiteOk) {
+    return;
+  }
+
+  if (micro_op_resolver.AddBuiltin(tflite::BuiltinOperator_EXPAND_DIMS,
+                                   tflite::ops::micro::Register_QUANTIZE()) !=
       kTfLiteOk) {
     return;
   }

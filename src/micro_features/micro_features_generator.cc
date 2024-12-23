@@ -1,18 +1,3 @@
-/* Copyright 2019 The TensorFlow Authors. All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-==============================================================================*/
-
 #include "micro_features_generator.h"
 
 #include <Arduino.h>
@@ -25,11 +10,34 @@ limitations under the License.
 
 // Configure FFT to output 16 bit fixed point.
 #define FIXED_POINT 16
+#define NUM_CHROMA_BINS 12
 
 namespace {
 
 FrontendState g_micro_features_state;
 bool g_is_first_time = true;
+
+// Function to calculate Zero Crossing Rate (ZCR)
+int CalculateZeroCrossingRate(const int16_t* signal, int length) {
+  int zero_crossings = 0;
+  for (int i = 1; i < length; i++) {
+    if ((signal[i - 1] >= 0 && signal[i] < 0) || (signal[i - 1] < 0 && signal[i] >= 0)) {
+      zero_crossings++;
+    }
+  }
+  return zero_crossings;
+}
+
+// Function to calculate Chroma STFT (simplified version)
+void CalculateChroma(const float* fft_values, int fft_size, float* chroma_bins) {
+  memset(chroma_bins, 0, sizeof(float) * NUM_CHROMA_BINS);
+  for (int i = 0; i < fft_size; i++) {
+    float frequency = i * kAudioSampleFrequency / fft_size;
+    int chroma_index = static_cast<int>(round(log2(frequency / 440.0) * 12.0)) % NUM_CHROMA_BINS;
+    if (chroma_index < 0) chroma_index += NUM_CHROMA_BINS;
+    chroma_bins[chroma_index] += fft_values[i];
+  }
+}
 
 }  // namespace
 
@@ -51,21 +59,12 @@ TfLiteStatus InitializeMicroFeatures(tflite::ErrorReporter* error_reporter) {
   config.pcan_gain_control.gain_bits = 21;
   config.log_scale.enable_log = 1;
   config.log_scale.scale_shift = 6;
-  if (!FrontendPopulateState(&config, &g_micro_features_state,
-                             kAudioSampleFrequency)) {
+  if (!FrontendPopulateState(&config, &g_micro_features_state, kAudioSampleFrequency)) {
     TF_LITE_REPORT_ERROR(error_reporter, "FrontendPopulateState() failed");
     return kTfLiteError;
   }
   g_is_first_time = true;
   return kTfLiteOk;
-}
-
-// This is not exposed in any header, and is only used for testing, to ensure
-// that the state is correctly set up before generating results.
-void SetMicroFeaturesNoiseEstimates(const uint32_t* estimate_presets) {
-  for (int i = 0; i < g_micro_features_state.filterbank.num_channels; ++i) {
-    g_micro_features_state.noise_reduction.estimate[i] = estimate_presets[i];
-  }
 }
 
 TfLiteStatus GenerateMicroFeatures(tflite::ErrorReporter* error_reporter,
@@ -82,14 +81,22 @@ TfLiteStatus GenerateMicroFeatures(tflite::ErrorReporter* error_reporter,
   FrontendOutput frontend_output = FrontendProcessSamples(
       &g_micro_features_state, frontend_input, input_size, num_samples_read);
 
+  // Calculate Zero Crossing Rate (ZCR)
+  int zcr = CalculateZeroCrossingRate(frontend_input, input_size);
+
+  // Calculate Chroma STFT
+  float fft_output[frontend_output.size];
+  for (int i = 0; i < frontend_output.size; i++) {
+    fft_output[i] = frontend_output.values[i] / 32768.0;  // Normalize values
+  }
+  float chroma_bins[NUM_CHROMA_BINS];
+  CalculateChroma(fft_output, frontend_output.size, chroma_bins);
+
+  // Combine features into output buffer
   for (int i = 0; i < frontend_output.size; ++i) {
-    // These scaling values are derived from those used in input_data.py in the
-    // training pipeline.
     constexpr int32_t value_scale = (10 * 255);
     constexpr int32_t value_div = (256 * 26);
-    int32_t value =
-        ((frontend_output.values[i] * value_scale) + (value_div / 2)) /
-        value_div;
+    int32_t value = ((frontend_output.values[i] * value_scale) + (value_div / 2)) / value_div;
     if (value < 0) {
       value = 0;
     }
@@ -99,12 +106,13 @@ TfLiteStatus GenerateMicroFeatures(tflite::ErrorReporter* error_reporter,
     output[i] = value;
   }
 
-  //for (size_t i = 0; i < frontend_output.size; ++i) {
-  //  // Envia cada valor do buffer de saída
-  //  log_d("output: %i", output[i]);
-  //}
+  // Append ZCR to the output
+  output[frontend_output.size] = zcr;
 
-  //log_d("Micro_feature generated");
+  // Append Chroma bins to the output
+  for (int i = 0; i < NUM_CHROMA_BINS; ++i) {
+    output[frontend_output.size + 1 + i] = static_cast<uint8_t>(chroma_bins[i] * 255);
+  }
 
   return kTfLiteOk;
 }

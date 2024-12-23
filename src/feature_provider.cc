@@ -106,6 +106,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
                       kFeatureSliceDurationMs, &audio_samples_size,
                       &audio_samples);    
       log_d("Audio samples size: %i", audio_samples_size);
+      log_d(" kFeatureSliceDurationMs: %i", kFeatureSliceDurationMs);
       
       if (audio_samples_size < kMaxAudioSampleSize) {
         TF_LITE_REPORT_ERROR(error_reporter,
