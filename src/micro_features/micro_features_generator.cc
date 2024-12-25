@@ -114,5 +114,7 @@ TfLiteStatus GenerateMicroFeatures(tflite::ErrorReporter* error_reporter,
     output[frontend_output.size + 1 + i] = static_cast<uint8_t>(chroma_bins[i] * 255);
   }
 
+  //log_d("Feature output size: %i", frontend_output.size + 1 + NUM_CHROMA_BINS);
+
   return kTfLiteOk;
 }

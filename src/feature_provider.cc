@@ -43,6 +43,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
     log_d("Error: feature size mismatch.");
     return kTfLiteError;
   }
+  log_d("Feature size: %i", feature_size_);
 
   // Quantize the time into steps as long as each window stride, so we can
   // figure out which audio data we need to fetch.
@@ -105,8 +106,8 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
       GetAudioSamples(error_reporter, (slice_start_ms > 0 ? slice_start_ms : 0),
                       kFeatureSliceDurationMs, &audio_samples_size,
                       &audio_samples);    
-      log_d("Audio samples size: %i", audio_samples_size);
-      log_d(" kFeatureSliceDurationMs: %i", kFeatureSliceDurationMs);
+      //log_d("Audio samples size: %i", audio_samples_size);
+      //log_d(" kFeatureSliceDurationMs: %i", kFeatureSliceDurationMs);
       
       if (audio_samples_size < kMaxAudioSampleSize) {
         TF_LITE_REPORT_ERROR(error_reporter,
@@ -124,8 +125,9 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
         log_d("Error generating micro features.");
         return generate_status;
       }
-      log_d("Generated micro features: %i", num_samples_read);
+      //log_d("Generated micro features: %i", num_samples_read);
     }
+    log_d("Saiu do for de 161");
   }
   return kTfLiteOk;
 }

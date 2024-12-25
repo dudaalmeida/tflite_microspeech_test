@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <esp_task_wdt.h>
 
-#include "kiss_fft.h"
+#include "C:/Users/eduarda.almeida/Desktop/esp32-tensorflow-microspeech/lib/tfmicro/third_party/kissfft/kiss_fft.h"
 #include "audio_provider.h"
 #include "command_responder.h"
 #include "feature_provider.h"
@@ -26,11 +26,11 @@ limitations under the License.
 #include "micro_features/model.h"
 #include "recognize_commands.h"
 #include "tensorflow/lite/micro/kernels/micro_ops.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "C:\Users\eduarda.almeida\Desktop\esp32-tensorflow-microspeech\lib\tfmicro\tensorflow\lite\micro\micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/schema/schema_generated.h"
-#include "tensorflow/lite/version.h"
+//#include "tensorflow/lite/version.h"
 
 #include "esp_heap_caps.h"
 
@@ -72,7 +72,9 @@ int32_t previous_time = 0;
 constexpr int kTensorArenaSize = 90 * 1024;
 uint8_t tensor_arena[kTensorArenaSize];
 uint8_t feature_buffer[kFeatureElementCount];
-uint8_t* model_input_buffer = nullptr;
+//uint8_t* model_input_buffer = nullptr;
+float* model_input_buffer = nullptr; // Se o modelo espera float32
+
 }  // namespace
 
 void intro(const char *message);
@@ -99,6 +101,7 @@ void setup() {
   // Set up logging. Google style is to avoid globals or statics because of
   // lifetime uncertainty, but since this has a trivial destructor it's okay.
   // NOLINTNEXTLINE(runtime-global-variables)
+  
   static tflite::MicroErrorReporter micro_error_reporter;
   error_reporter = &micro_error_reporter;
 
@@ -121,28 +124,19 @@ void setup() {
   //
   // tflite::ops::micro::AllOpsResolver resolver;
   // NOLINTNEXTLINE(runtime-global-variables)
-  static tflite::MicroOpResolver<3> micro_op_resolver(error_reporter);
-  //if (micro_op_resolver.AddBuiltin(
-  //        tflite::BuiltinOperator_DEPTHWISE_CONV_2D,
-  //        tflite::ops::micro::Register_DEPTHWISE_CONV_2D()) != kTfLiteOk) {
-  //  return;
-  //}
-  if (micro_op_resolver.AddBuiltin(
-          tflite::BuiltinOperator_FULLY_CONNECTED,
-          tflite::ops::micro::Register_FULLY_CONNECTED()) != kTfLiteOk) {
-    return;
-  }
-  if (micro_op_resolver.AddBuiltin(tflite::BuiltinOperator_SOFTMAX,
-                                   tflite::ops::micro::Register_SOFTMAX()) !=
-      kTfLiteOk) {
-    return;
-  }
-
-  if (micro_op_resolver.AddBuiltin(tflite::BuiltinOperator_EXPAND_DIMS,
-                                   tflite::ops::micro::Register_QUANTIZE()) !=
-      kTfLiteOk) {
-    return;
-  }
+  #define OPERATIONS_NBR  11
+  static tflite::MicroMutableOpResolver<OPERATIONS_NBR> micro_op_resolver;
+  micro_op_resolver.AddAdd();
+  micro_op_resolver.AddConv2D();
+  micro_op_resolver.AddRelu();
+  micro_op_resolver.AddMaxPool2D();
+  micro_op_resolver.AddReshape();
+  micro_op_resolver.AddFullyConnected();
+  micro_op_resolver.AddSoftmax();
+  micro_op_resolver.AddExpandDims();
+  micro_op_resolver.AddMul();
+  micro_op_resolver.AddSqueeze();
+  micro_op_resolver.AddMaxPool2D();
 
   // Build an interpreter to run the model with.
   static tflite::MicroInterpreter static_interpreter(
@@ -158,15 +152,31 @@ void setup() {
 
   // Get information about the memory area to use for the model's input.
   model_input = interpreter->input(0);
-  if ((model_input->dims->size != 4) || (model_input->dims->data[0] != 1) ||
+  //if ((model_input->dims->size != 3) || (model_input->dims->data[0] != NULL) ||
+  if ((model_input->dims->size != 3) ||
       (model_input->dims->data[1] != kFeatureSliceCount) ||
       (model_input->dims->data[2] != kFeatureSliceSize) ||
-      (model_input->type != kTfLiteUInt8)) {
+      (model_input->type != kTfLiteFloat32)) {
     TF_LITE_REPORT_ERROR(error_reporter,
                          "Bad input tensor parameters in model");
+    /*
+    TF_LITE_REPORT_ERROR(error_reporter,
+                     "Tensor dimensions: size=%d, batch=%d, slice_count=%d, slice_size=%d, type=%d",
+                     model_input->dims->size,
+                     model_input->dims->data[0],
+                     model_input->dims->data[1],
+                     model_input->dims->data[2],
+                     model_input->type);
+  */
+   /*
+    TF_LITE_REPORT_ERROR(error_reporter, "Expected slice_count: %d, slice_size: %d",
+                     kFeatureSliceCount, kFeatureSliceSize);
+
+    */
     return;
   }
-  model_input_buffer = model_input->data.uint8;
+  //model_input_buffer = model_input->data.uint8;
+  model_input_buffer = model_input->data.f;
 
   // Prepare to access the audio spectrograms from a microphone or other source
   // that will provide the inputs to the neural network.
@@ -195,6 +205,7 @@ void loop() {
     log_d("Feature generation failed");
     return;
   }
+
   previous_time = current_time;
   // If no new audio samples have been received since last time, don't bother
   // running the network model.
@@ -204,8 +215,9 @@ void loop() {
 
   // Copy feature buffer to input tensor
   for (int i = 0; i < kFeatureElementCount; i++) {
-    model_input_buffer[i] = feature_buffer[i];
-    //log_d("model_input_buffer[i]: %i",  model_input_buffer[i]);
+    //model_input_buffer[i] = feature_buffer[i];
+    model_input_buffer[i] = (feature_buffer[i]); 
+    log_d("model_input_buffer[i]: %i",  model_input_buffer[i]);
   }
 
   // Run the model on the spectrogram input and make sure it succeeds.
@@ -216,6 +228,7 @@ void loop() {
     log_d("Invoke failed");
     return;
   }
+
   // Obtain a pointer to the output tensor
   TfLiteTensor* output = interpreter->output(0);
   log_d("Output: %i",output->bytes);
@@ -236,6 +249,8 @@ void loop() {
     inferenceStart = millis();
     inferenceCounter = 0;
   }
+
+
   //display.clear();
   //display.setFont(ArialMT_Plain_10);
   //display.drawString(0, 10, inferencePerSecond);
@@ -245,7 +260,7 @@ void loop() {
   // own function for a real application.
   //RespondToCommand(error_reporter, &display, current_time, found_command, score,
   //                 is_new_command);
-  //display.display();
+  display.display();
   log_d("Comando: %s \n", found_command);
   log_d("Score: %d \n", score);
   intro(found_command);

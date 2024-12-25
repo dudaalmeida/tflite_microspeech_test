@@ -19,7 +19,7 @@ limitations under the License.
 #define TENSORFLOW_LITE_MICRO_EXAMPLES_MICRO_SPEECH_COMMAND_RESPONDER_H_
 
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "C:/Users/eduarda.almeida/Desktop/esp32-tensorflow-microspeech/lib/tfmicro/tensorflow/lite/core/api/error_reporter.h"
 #include <Wire.h>  // Only needed for Arduino 1.6.5 and earlier
 //#include "SSD1306Wire.h" // legacy include: `#include "SSD1306.h"`
 

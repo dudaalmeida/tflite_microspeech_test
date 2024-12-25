@@ -20,7 +20,8 @@ limitations under the License.
 
 #include "tensorflow/lite/c/common.h"
 #include "micro_features/micro_model_settings.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "C:/Users/eduarda.almeida/Desktop/esp32-tensorflow-microspeech/lib/tfmicro/tensorflow/lite/core/api/error_reporter.h"
+
 
 // Partial implementation of std::dequeue, just providing the functionality
 // that's needed to keep a record of previous neural network results over a

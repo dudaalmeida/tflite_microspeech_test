@@ -17,7 +17,8 @@ limitations under the License.
 #define TENSORFLOW_LITE_MICRO_EXAMPLES_MICRO_SPEECH_MICRO_FEATURES_MICRO_FEATURES_GENERATOR_H_
 
 #include "tensorflow/lite/c/common.h"
-#include "tensorflow/lite/micro/micro_error_reporter.h"
+#include "C:/Users/eduarda.almeida/Desktop/esp32-tensorflow-microspeech/lib/tfmicro/tensorflow/lite/core/api/error_reporter.h"
+
 
 // Sets up any resources needed for the feature generation pipeline.
 TfLiteStatus InitializeMicroFeatures(tflite::ErrorReporter* error_reporter);
